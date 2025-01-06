@@ -109,7 +109,7 @@ async function fetchInternalMetaData(url) {
 
 export class LinkPlugin extends Plugin {
     static id = "link";
-    static dependencies = ["dom", "history", "selection", "split", "lineBreak", "overlay"];
+    static dependencies = ["dom", "history", "input", "selection", "split", "lineBreak", "overlay"];
     // @phoenix @todo: do we want to have createLink and insertLink methods in link plugin?
     static shared = ["createLink", "insertLink", "getPathAsUrlCommand"];
     resources = {
@@ -188,9 +188,13 @@ export class LinkPlugin extends Plugin {
     setup() {
         this.overlay = this.dependencies.overlay.createOverlay(LinkPopover, {}, { sequence: 50 });
         this.addDomListener(this.editable, "click", (ev) => {
-            if (ev.target.tagName === "A" && ev.target.isContentEditable) {
+            const target = closestElement(ev.target, "a");
+            if (target?.isContentEditable) {
+                if (ev.ctrlKey || ev.metaKey) {
+                    window.open(target.href, "_blank");
+                }
                 ev.preventDefault();
-                this.toggleLinkTools({ link: ev.target });
+                this.toggleLinkTools({ link: target });
             }
         });
         // link creation is added to the command service because of a shortcut conflict,

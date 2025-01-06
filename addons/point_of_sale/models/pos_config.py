@@ -25,7 +25,7 @@ class PosConfig(models.Model):
         return warehouse
 
     def _default_picking_type_id(self):
-        return self.env['stock.warehouse'].with_context(active_test=False).search(self.env['stock.warehouse']._check_company_domain(self.env.company), limit=1).pos_type_id.id
+        return self.env['stock.warehouse'].search(self.env['stock.warehouse']._check_company_domain(self.env.company), limit=1).pos_type_id.id
 
     def _default_sale_journal(self):
         journal = self.env['account.journal']._ensure_company_account_journal()
@@ -200,6 +200,19 @@ class PosConfig(models.Model):
     order_edit_tracking = fields.Boolean(string="Track orders edits", help="Store edited orders in the backend", default=False)
     orderlines_sequence_in_cart_by_category = fields.Boolean(string="Order cart by category's sequence", default=False,
         help="When active, orderlines will be sorted based on product category and sequence in the product screen's order cart.")
+
+    def dispatch_record_ids(self, session_id, records, login_number):
+        self._notify('SYNCHRONISATION', {
+            'records': records,
+            'session_id': session_id,
+            'login_number': login_number
+        })
+
+    def get_records(self, data):
+        records = {}
+        for model, ids in data.items():
+            records[model] = self.env[model].browse(ids).read(self.env[model]._load_pos_data_fields(self.id), load=False)
+        return records
 
     @api.model
     def _load_pos_data_domain(self, data):
@@ -661,7 +674,7 @@ class PosConfig(models.Model):
             return {
                 'name': _('Rescue Sessions'),
                 'res_model': 'pos.session',
-                'view_mode': 'tree,form',
+                'view_mode': 'list,form',
                 'domain': [('id', 'in', rescue_session_ids.ids)],
                 'type': 'ir.actions.act_window',
             }
